@@ -162,6 +162,7 @@ if __name__ == "__main__":
         emb_orig = get_embedding( index_to_path(sorted_orig_dir, orig_path, orig_pic_ind, "orig") )
         # while emb_orig == None:
         #     orig_pic_ind = select(people_pool)
+        dist["same_person"]["orig"] = str(get_embedding_dist(emb_ref, emb_orig))
 
         for feature in FEATURES:
             emb_orig_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, orig_pic_ind, feature) )
@@ -169,9 +170,12 @@ if __name__ == "__main__":
             
         # ref vs imposter
         emb_imposter = get_embedding( index_to_path(sorted_orig_dir, orig_path, imposter_pic_ind, "orig") )
+
+        dist["imposter"]["orig"] = str(get_embedding_dist(emb_ref, emb_imposter))
+
         for feature in FEATURES:
             emb_imposter_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, imposter_pic_ind, feature) )
-            dist["imposter"][feature] =  str(get_embedding_dist(emb_ref, emb_orig_retouched))
+            dist["imposter"][feature] =  str(get_embedding_dist(emb_ref, emb_imposter_retouched))
 
     # output dist
     f = open("results.json", "w")
