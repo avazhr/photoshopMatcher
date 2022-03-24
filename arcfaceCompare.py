@@ -6,7 +6,7 @@ import sys
 import numpy as np 
 import insightface 
 from insightface.app import FaceAnalysis
-from insightface.data import get_image as ins_get_image
+# from insightface.data import get_image as ins_get_image
 from PIL import Image
 import os
 import time
@@ -17,6 +17,7 @@ import json
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-whitegrid')
 import numpy as np
+from sklearn import metrics
 
 #from work_queue import *    # comment this out if developing locally or run:
                             # conda install -c conda-forge ndcctools
@@ -162,24 +163,70 @@ if __name__ == "__main__":
         emb_orig = get_embedding( index_to_path(sorted_orig_dir, orig_path, orig_pic_ind, "orig") )
         # while emb_orig == None:
         #     orig_pic_ind = select(people_pool)
-        dist["same_person"]["orig"] = str(get_embedding_dist(emb_ref, emb_orig))
+        orig_dist = get_embedding_dist(emb_ref, emb_orig)
+        if orig_dist:
+            dist["same_person"]["orig"].append(float(orig_dist))
 
         for feature in FEATURES:
             emb_orig_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, orig_pic_ind, feature) )
-            dist["same_person"][feature] =  str(get_embedding_dist(emb_ref, emb_orig_retouched))
+            same_feature_dist = get_embedding_dist(emb_ref, emb_orig_retouched)
+            if same_feature_dist:
+                dist["same_person"][feature].append(float(same_feature_dist))
             
         # ref vs imposter
         emb_imposter = get_embedding( index_to_path(sorted_orig_dir, orig_path, imposter_pic_ind, "orig") )
 
-        dist["imposter"]["orig"] = str(get_embedding_dist(emb_ref, emb_imposter))
+        impostor_dist = get_embedding_dist(emb_ref, emb_imposter)
+        if impostor_dist:
+            dist["imposter"]["orig"].append(float(impostor_dist))
 
         for feature in FEATURES:
             emb_imposter_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, imposter_pic_ind, feature) )
-            dist["imposter"][feature] =  str(get_embedding_dist(emb_ref, emb_imposter_retouched))
+            impostor_feature_dist = get_embedding_dist(emb_ref, emb_imposter_retouched)
+            if impostor_feature_dist:
+                dist["imposter"][feature].append(float(impostor_feature_dist))
+
+    # calculate the ROC curves
+    ROC_CURVES = {
+        "eyes_100_roc": ("same_person", "eyes_100"),
+        "nose_100_roc": ("same_person", "nose_100"),
+        "lips_100_roc": ("same_person", "lips_100"),
+        "faceShape_100_roc": ("same_person", "faceShape_100"),
+        "imp_same_roc": ("imposter", "orig"),
+        "imp_eyes_100_roc": ("imposter", "eyes_100"),
+        "imp_nose_100_roc": ("imposter", "nose_100"),
+        "imp_lips_100_roc": ("imposter", "lips_100"),
+        "imp_faceShape_100_roc": ("imposter", "faceShape_100")
+    }
+    # this is the identity vs. self results
+
+    # stores a dict of the ROC calculation results
+    roc_results = {}
+
+    for curve, features in ROC_CURVES.items():
+        # here, we get the value from the above ROC_CURVES dict, then use them to access the 
+        # dist dict and get the correct array for this feature
+        # ex. first it will try eyes_100 by going to ["same_person"]["eyes_100"]
+        feature_arr = dist[features[0]][features[1]]
+        y_true = []
+        if features[0] == "same_person":
+            y_true = [1] * len(feature_arr)
+        else:
+            y_true = [-1] * len(feature_arr)
+
+        fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(feature_arr), pos_label=1)
+        roc_results[curve] = (fpr, tpr, thresholds)
+        print(f"{curve}: {fpr},")
+        print(f"{tpr},")
+        print(f"{thresholds}")
+        print(" ")
 
     # output dist
     f = open("results.json", "w")
     json.dump(dist, f)
     f.close()
 
-
+    # output ROC results
+    f2 = open("roc_results.json", "w")
+    json.dump(roc_results, f2)
+    f2.close()
