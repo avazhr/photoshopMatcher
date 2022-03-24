@@ -191,12 +191,12 @@ if __name__ == "__main__":
         "eyes_100_roc": ("same_person", "eyes_100"),
         "nose_100_roc": ("same_person", "nose_100"),
         "lips_100_roc": ("same_person", "lips_100"),
-        "faceShape_100_roc": ("same_person", "faceShape_100"),
+        "faceShape_100_roc": ("same_person", "faceshape_100"),
         "imp_same_roc": ("imposter", "orig"),
         "imp_eyes_100_roc": ("imposter", "eyes_100"),
         "imp_nose_100_roc": ("imposter", "nose_100"),
         "imp_lips_100_roc": ("imposter", "lips_100"),
-        "imp_faceShape_100_roc": ("imposter", "faceShape_100")
+        "imp_faceShape_100_roc": ("imposter", "faceshape_100")
     }
     # this is the identity vs. self results
 
@@ -214,7 +214,7 @@ if __name__ == "__main__":
         else:
             y_true = [-1] * len(feature_arr)
 
-        fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(feature_arr), pos_label=1)
+        fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(feature_arr))
         roc_results[curve] = (fpr, tpr, thresholds)
         print(f"{curve}: {fpr},")
         print(f"{tpr},")
