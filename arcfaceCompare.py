@@ -187,39 +187,48 @@ if __name__ == "__main__":
                 dist["imposter"][feature].append(float(impostor_feature_dist))
 
     # calculate the ROC curves
-    ROC_CURVES = {
-        "eyes_100_roc": ("same_person", "eyes_100"),
-        "nose_100_roc": ("same_person", "nose_100"),
-        "lips_100_roc": ("same_person", "lips_100"),
-        "faceShape_100_roc": ("same_person", "faceshape_100"),
-        "imp_same_roc": ("imposter", "orig"),
-        "imp_eyes_100_roc": ("imposter", "eyes_100"),
-        "imp_nose_100_roc": ("imposter", "nose_100"),
-        "imp_lips_100_roc": ("imposter", "lips_100"),
-        "imp_faceShape_100_roc": ("imposter", "faceshape_100")
-    }
-    # this is the identity vs. self results
 
     # stores a dict of the ROC calculation results
     roc_results = {}
 
-    for curve, features in ROC_CURVES.items():
-        # here, we get the value from the above ROC_CURVES dict, then use them to access the 
-        # dist dict and get the correct array for this feature
-        # ex. first it will try eyes_100 by going to ["same_person"]["eyes_100"]
-        feature_arr = dist[features[0]][features[1]]
-        y_true = []
-        if features[0] == "same_person":
-            y_true = [1] * len(feature_arr)
-        else:
-            y_true = [-1] * len(feature_arr)
+    # make a list of features that includes "orig"
+    ROC_FEATURES = ["orig"]
+    for f in FEATURES:
+        ROC_FEATURES.append(f)
 
-        fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(feature_arr))
-        roc_results[curve] = (fpr, tpr, thresholds)
-        print(f"{curve}: {fpr},")
+    for feature in ROC_FEATURES:
+        # go feature by feature, including orig, and run each experiment
+        gen_same = dist["same_person"][feature]
+        gen_imp = dist["imposter"][feature]
+        genuine_arr = gen_same + gen_imp
+        y_true = [1] * len(gen_same) + [-1] * len(gen_imp)
+
+        fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(genuine_arr))
+        roc_results[feature] = (fpr.tolist(), tpr.tolist(), thresholds.tolist())
+        print(" ")
+        print(f"{feature}: {fpr},")
         print(f"{tpr},")
         print(f"{thresholds}")
-        print(" ")
+
+        auc_score = metrics.roc_auc_score(np.array(y_true), np.array(genuine_arr))
+        
+        # plot curves
+        plt.figure()
+        plt.plot(
+            fpr,
+            tpr,
+            color="darkorange",
+            lw=2,
+            label=f"ROC Curve, auc = {auc_score}"
+        )
+        plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title(f"ROC for {feature}")
+        plt.legend(loc="lower right")
+        plt.savefig(f"{feature}.png")
 
     # output dist
     f = open("results.json", "w")
