@@ -24,7 +24,7 @@ from sklearn import metrics
 
 ORIG_PATH = "/Volumes/Extreme Pro/FRGC-2.0-dist/FRGC-2.0-dist/nd1/Fall2003"
 RETOUCHED_PATH = "/Volumes/Extreme Pro/FacialRetouch"
-FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100"]
+FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100", "eyes_50", "faceshape_50", "lips_50", "nose_50"]
 DEST_DIRNAMES = {
     "eyes_50": "_eyes50",
     "eyes_100": "_eyes100",
@@ -115,14 +115,22 @@ if __name__ == "__main__":
             "eyes_100":[],
             "faceshape_100":[],
             "lips_100":[],
-            "nose_100":[]
+            "nose_100":[],
+            "eyes_50": [],
+            "faceshape_50": [],
+            "lips_50": [],
+            "nose_50": []
         },
         "imposter":{
             "orig":[],
             "eyes_100":[],
             "faceshape_100":[],
             "lips_100":[],
-            "nose_100":[]
+            "nose_100":[],
+            "eyes_50": [],
+            "faceshape_50": [],
+            "lips_50": [],
+            "nose_50": []
         }
 
     }
