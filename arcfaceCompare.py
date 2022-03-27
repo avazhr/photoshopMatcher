@@ -208,8 +208,11 @@ if __name__ == "__main__":
         # go feature by feature, including orig, and run each experiment
         gen_same = dist["same_person"][feature]
         gen_imp = dist["imposter"][feature]
-        genuine_arr = gen_same + gen_imp
-        y_true = [1] * len(gen_same) + [-1] * len(gen_imp)
+        genuine_arr = [*gen_same, *gen_imp]    # check concatenation
+        print(f"genuine_arr: {genuine_arr}")
+        y_true = [1] * len(gen_same)
+        y_true.extend([-1] * len(gen_imp))
+        print(f"y_true: {y_true}")
 
         fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(genuine_arr))
         roc_results[feature] = (fpr.tolist(), tpr.tolist(), thresholds.tolist())
@@ -229,6 +232,7 @@ if __name__ == "__main__":
             lw=2,
             label=f"ROC Curve, auc = {auc_score}"
         )
+
         plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
@@ -237,6 +241,14 @@ if __name__ == "__main__":
         plt.title(f"ROC for {feature}")
         plt.legend(loc="lower right")
         plt.savefig(f"{feature}.png")
+
+        # plot ROC distributions
+        # if both are Gaussian/completely overlap, we likely have a problem with ArcFace
+        # comparisons
+        plt.figure()
+        plt.hist(genuine_arr, bins=30)
+        plt.gca().set(title=f"Distribution for {feature}", ylabel='Frequency')
+        plt.savefig(f"{feature}_dist.png")
 
     # output dist
     f = open("results.json", "w")
