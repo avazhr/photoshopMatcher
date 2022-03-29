@@ -157,6 +157,9 @@ if __name__ == "__main__":
     people_pool = set([i for i in range(len(person_to_pic_range) )])
     print(people_pool)
 
+    # check how pictures are loaded
+    # check pair selection; is everything an impostor?
+
     while len(people_pool) > 1 :
         #randomly pick a person
         ref_person_ind, imposter_ind = rand_pair(people_pool)
@@ -246,7 +249,9 @@ if __name__ == "__main__":
         # if both are Gaussian/completely overlap, we likely have a problem with ArcFace
         # comparisons
         plt.figure()
-        plt.hist(genuine_arr, bins=30)
+        plt.hist(gen_same, bins=30, alpha=0.5, label="genuine")
+        plt.hist(gen_imp, bins=30, alpha=0.5, label="impostor")
+        plt.legend(loc='upper right')
         plt.gca().set(title=f"Distribution for {feature}", ylabel='Frequency')
         plt.savefig(f"{feature}_dist.png")
 
