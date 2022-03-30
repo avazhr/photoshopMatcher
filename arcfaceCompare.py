@@ -24,7 +24,8 @@ from sklearn import metrics
 
 ORIG_PATH = "/Volumes/Extreme Pro/FRGC-2.0-dist/FRGC-2.0-dist/nd1/Fall2003"
 RETOUCHED_PATH = "/Volumes/Extreme Pro/FacialRetouch"
-FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100", "eyes_50", "faceshape_50", "lips_50", "nose_50"]
+FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100"]
+# FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100", "eyes_50", "faceshape_50", "lips_50", "nose_50"]
 DEST_DIRNAMES = {
     "eyes_50": "_eyes50",
     "eyes_100": "_eyes100",
@@ -46,7 +47,7 @@ def group_individuals(sorted_orig_dir, person_to_pic_range):
     cur_index = 0
     previd = ""
     for i, filename in enumerate(sorted_orig_dir):
-        print(f"cur-index: {cur_index}, filename: {filename} ")
+        #print(f"cur-index: {cur_index}, filename: {filename} ")
         if "d" not in filename or ".jpg" not in filename: 
             if previd != "":
                 person_to_pic_range[cur_index].append(i)
@@ -88,14 +89,19 @@ def get_embedding_dist(emb1, emb2):
 
     return face_rec.get_distance_embeddings(emb1, emb2)
 
-def select(pool):
+def select(pool, people_pool, ref_person_ind):
     res = random.sample(pool,1)
     pool.remove(res[0])
+    if len(pool) == 0 or len(pool) == 1:
+        people_pool.remove(ref_person_ind)
     return res[0]
 
-def rand_pair(pool):
+def rand_pair(pool, people_pool, ref_person_ind):
 
-    return [select(pool) for i in range(2)]
+    return [select(pool, people_pool, ref_person_ind) for i in range(2)]
+
+def rand_people_pair(people_pool):
+    return random.sample(people_pool,2)
 
 def index_to_path(sorted_dir, path, index, feature):  
     
@@ -106,96 +112,7 @@ def index_to_path(sorted_dir, path, index, feature):
         print(f"{path}/{feature}/{person_id}{DEST_DIRNAMES[feature]}.jpg")
         return f"{path}/{feature}/{person_id}{DEST_DIRNAMES[feature]}.jpg"
 
-   
-if __name__ == "__main__":
-
-    dist = {
-        "same_person":{
-            "orig":[],
-            "eyes_100":[],
-            "faceshape_100":[],
-            "lips_100":[],
-            "nose_100":[],
-            "eyes_50": [],
-            "faceshape_50": [],
-            "lips_50": [],
-            "nose_50": []
-        },
-        "imposter":{
-            "orig":[],
-            "eyes_100":[],
-            "faceshape_100":[],
-            "lips_100":[],
-            "nose_100":[],
-            "eyes_50": [],
-            "faceshape_50": [],
-            "lips_50": [],
-            "nose_50": []
-        }
-
-    }
-    
-    orig_path = "/Volumes/Extreme Pro/FRGC-2.0-dist/FRGC-2.0-dist/nd1/Fall2003"
-    retouched_path = "/Volumes/Extreme Pro/FacialRetouch"
-
-    if len(sys.argv) == 3:
-        orig_path = sys.argv[1]
-        retouched_path = sys.argv[2]
-    elif len(sys.argv) != 1:
-        print('usage: ./arcfaceCompare.py <orig_path> <retouched_path>', file=sys.stderr)
-        exit(1)
-    
-    sorted_orig_dir = sorted(os.listdir(orig_path))
-    print(sorted_orig_dir)
-    
-    #marks the starting (inclusive) and ending (exclusive) index of the pictures of each person
-    # person_to_pic_range = collections.defaultdict(lambda: list())
-    person_to_pic_range = []
-    group_individuals(sorted_orig_dir, person_to_pic_range)
-    print(person_to_pic_range)
-    
-    people_pool = set([i for i in range(len(person_to_pic_range) )])
-    print(people_pool)
-
-    # check how pictures are loaded
-    # check pair selection; is everything an impostor?
-
-    while len(people_pool) > 1 :
-        #randomly pick a person
-        ref_person_ind, imposter_ind = rand_pair(people_pool)
-        ref_pic_ind, orig_pic_ind = rand_pair(person_to_pic_range[ref_person_ind])
-        imposter_pic_ind = select(person_to_pic_range[imposter_ind])
-
-        emb_ref = get_embedding( index_to_path(sorted_orig_dir, orig_path, ref_pic_ind, "orig") )
-        # while emb_ref == None:
-        #     ref_pic_ind = select(people_pool)
-
-        # ref vs orig
-        emb_orig = get_embedding( index_to_path(sorted_orig_dir, orig_path, orig_pic_ind, "orig") )
-        # while emb_orig == None:
-        #     orig_pic_ind = select(people_pool)
-        orig_dist = get_embedding_dist(emb_ref, emb_orig)
-        if orig_dist:
-            dist["same_person"]["orig"].append(float(orig_dist))
-
-        for feature in FEATURES:
-            emb_orig_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, orig_pic_ind, feature) )
-            same_feature_dist = get_embedding_dist(emb_ref, emb_orig_retouched)
-            if same_feature_dist:
-                dist["same_person"][feature].append(float(same_feature_dist))
-            
-        # ref vs imposter
-        emb_imposter = get_embedding( index_to_path(sorted_orig_dir, orig_path, imposter_pic_ind, "orig") )
-
-        impostor_dist = get_embedding_dist(emb_ref, emb_imposter)
-        if impostor_dist:
-            dist["imposter"]["orig"].append(float(impostor_dist))
-
-        for feature in FEATURES:
-            emb_imposter_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, imposter_pic_ind, feature) )
-            impostor_feature_dist = get_embedding_dist(emb_ref, emb_imposter_retouched)
-            if impostor_feature_dist:
-                dist["imposter"][feature].append(float(impostor_feature_dist))
+def plot_graph(dist):
 
     # calculate the ROC curves
 
@@ -264,3 +181,109 @@ if __name__ == "__main__":
     f2 = open("roc_results.json", "w")
     json.dump(roc_results, f2)
     f2.close()
+
+    return 
+   
+if __name__ == "__main__":
+
+    dist = {
+        "same_person":{
+            "orig":[],
+            "eyes_100":[],
+            "faceshape_100":[],
+            "lips_100":[],
+            "nose_100":[],
+            "eyes_50": [],
+            "faceshape_50": [],
+            "lips_50": [],
+            "nose_50": []
+        },
+        "imposter":{
+            "orig":[],
+            "eyes_100":[],
+            "faceshape_100":[],
+            "lips_100":[],
+            "nose_100":[],
+            "eyes_50": [],
+            "faceshape_50": [],
+            "lips_50": [],
+            "nose_50": []
+        }
+
+    }
+    
+    orig_path = "/Volumes/Extreme Pro/FRGC-2.0-dist/FRGC-2.0-dist/nd1/Fall2003"
+    retouched_path = "/Volumes/Extreme Pro/FacialRetouch"
+
+    if len(sys.argv) == 3:
+        orig_path = sys.argv[1]
+        retouched_path = sys.argv[2]
+    elif len(sys.argv) != 1:
+        print('usage: python3 arcfaceCompare.py <orig_path> <retouched_path>', file=sys.stderr)
+        exit(1)
+    
+    sorted_orig_dir = sorted(os.listdir(orig_path))
+    #print(f"sorted_orig_dir: {sorted_orig_dir}")
+    
+    # marks the starting (inclusive) and ending (exclusive) index of the pictures of each person
+    person_to_pic_range = []
+    group_individuals(sorted_orig_dir, person_to_pic_range)
+    # print(f"person_to_pic_range: {person_to_pic_range}")
+    
+    person_to_pic = [[i for i in range(a, b)] for [a, b] in person_to_pic_range]
+    # print(f"person_to_pic: {person_to_pic}")
+
+    people_pool = set([i for i in range(len(person_to_pic_range) )])
+    # print(f"people_pool: {people_pool}")
+
+
+    while len(people_pool) > 1 :
+
+        #randomly pick two people
+        ref_person_ind, imposter_ind = rand_people_pair(people_pool)
+        if len(person_to_pic[ref_person_ind]) < 2:
+            people_pool.remove(ref_person_ind)
+            continue
+        
+        if len(person_to_pic[imposter_ind]) < 1:
+            people_pool.remove(imposter_ind)
+            continue
+
+        # ramdonly select two genuine pcitures
+        ref_pic_ind, orig_pic_ind = rand_pair(person_to_pic[ref_person_ind], people_pool, ref_person_ind)
+        # print(f"ref_pic_ind, orig_pic_ind: {ref_pic_ind}, {orig_pic_ind}")
+        
+        # ramdonly select an imposter picture
+        imposter_pic_ind = select(person_to_pic[imposter_ind], people_pool, ref_person_ind)
+        # print(f"imposter_pic_ind: {imposter_pic_ind}")
+
+        # genuine comparisons
+        emb_ref = get_embedding( index_to_path(sorted_orig_dir, orig_path, ref_pic_ind, "orig") )
+        emb_orig = get_embedding( index_to_path(sorted_orig_dir, orig_path, orig_pic_ind, "orig") )
+
+        orig_dist = get_embedding_dist(emb_ref, emb_orig)
+
+        if orig_dist:
+            dist["same_person"]["orig"].append(float(orig_dist))
+
+        for feature in FEATURES:
+            emb_orig_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, orig_pic_ind, feature) )
+            same_feature_dist = get_embedding_dist(emb_ref, emb_orig_retouched)
+            if same_feature_dist:
+                dist["same_person"][feature].append(float(same_feature_dist))
+            
+        # ref vs imposter
+        emb_imposter = get_embedding( index_to_path(sorted_orig_dir, orig_path, imposter_pic_ind, "orig") )
+
+        impostor_dist = get_embedding_dist(emb_ref, emb_imposter)
+        if impostor_dist:
+            dist["imposter"]["orig"].append(float(impostor_dist))
+
+        for feature in FEATURES:
+            emb_imposter_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, imposter_pic_ind, feature) )
+            impostor_feature_dist = get_embedding_dist(emb_ref, emb_imposter_retouched)
+            if impostor_feature_dist:
+                dist["imposter"][feature].append(float(impostor_feature_dist))
+
+
+    plot_graph(dist)
