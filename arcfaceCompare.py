@@ -1,3 +1,4 @@
+from inspect import getmembers
 from insightface.app import FaceAnalysis
 from insightface.data import get_image as ins_get_image
 from arcface import ArcFace
@@ -24,8 +25,8 @@ from sklearn import metrics
 
 ORIG_PATH = "/Volumes/Extreme Pro/FRGC-2.0-dist/FRGC-2.0-dist/nd1/Fall2003"
 RETOUCHED_PATH = "/Volumes/Extreme Pro/FacialRetouch"
-FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100"]
-# FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100", "eyes_50", "faceshape_50", "lips_50", "nose_50"]
+# FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100"]
+FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100", "eyes_50", "faceshape_50", "lips_50", "nose_50"]
 DEST_DIRNAMES = {
     "eyes_50": "_eyes50",
     "eyes_100": "_eyes100",
@@ -79,7 +80,11 @@ def get_embedding(path):
     cropped = img[face[1]:face[3], face[0]:face[2]] 
     # cv2.imwrite("temp1.jpg", cropped1)
     # o1 = face_rec.calc_emb("temp1.jpg")
-    emb = face_rec.calc_emb(cropped)
+    try:
+        emb = face_rec.calc_emb(cropped)
+    except:
+        print(f"Error calculating embedding for {path}")
+        return None
 
     return emb
 
@@ -103,14 +108,14 @@ def rand_pair(pool, people_pool, ref_person_ind):
 def rand_people_pair(people_pool):
     return random.sample(people_pool,2)
 
-def index_to_path(sorted_dir, path, index, feature):  
+def index_to_path(individual_id, photo_number, path, feature):  
     
     if feature == "orig":
-        return f"{path}/{sorted_dir[index]}"  
+        print(f"{path}/{individual_id}d{photo_number}.jpg")
+        return f"{path}/{individual_id}d{photo_number}.jpg"  
     else:
-        person_id = sorted_dir[index].split(".")[0]
-        print(f"{path}/{feature}/{person_id}{DEST_DIRNAMES[feature]}.jpg")
-        return f"{path}/{feature}/{person_id}{DEST_DIRNAMES[feature]}.jpg"
+        print(f"{path}/{feature}/{individual_id}d{photo_number}{DEST_DIRNAMES[feature]}.jpg")
+        return f"{path}/{feature}/{individual_id}d{photo_number}{DEST_DIRNAMES[feature]}.jpg"
 
 def plot_graph(dist):
 
@@ -130,8 +135,9 @@ def plot_graph(dist):
         gen_imp = dist["imposter"][feature]
         genuine_arr = [*gen_same, *gen_imp]    # check concatenation
         print(f"genuine_arr: {genuine_arr}")
-        y_true = [1] * len(gen_same)
-        y_true.extend([-1] * len(gen_imp))
+        # are these the right values for these parts of y_true?
+        y_true = [-1] * len(gen_same)
+        y_true.extend([1] * len(gen_imp))
         print(f"y_true: {y_true}")
 
         fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(genuine_arr))
@@ -183,6 +189,28 @@ def plot_graph(dist):
     f2.close()
 
     return 
+
+class Individual:
+
+    # init will automatically find all of this individual's photos and put them in 
+    # the object's photos array
+    def __init__(self, id):
+        self.id = id
+        self.photos = []
+        d = os.scandir(ORIG_PATH)
+        for entry in d:
+            if entry.is_file() and id == entry.name.split('d')[0]:
+                # get the second half of the filename that identifies this photo
+                # and chop off the .jpg extension
+                photo = entry.name.split('d')[1]
+                self.photos.append(photo[:-4])
+
+        print(f"{self.id}: {self.photos}")
+        # shuffle the photos array so every picture is randomized
+        random.shuffle(self.photos)
+
+    def next_photo(self):
+        return self.photos.pop()
    
 if __name__ == "__main__":
 
@@ -221,69 +249,103 @@ if __name__ == "__main__":
     elif len(sys.argv) != 1:
         print('usage: python3 arcfaceCompare.py <orig_path> <retouched_path>', file=sys.stderr)
         exit(1)
-    
-    sorted_orig_dir = sorted(os.listdir(orig_path))
-    #print(f"sorted_orig_dir: {sorted_orig_dir}")
-    
-    # marks the starting (inclusive) and ending (exclusive) index of the pictures of each person
-    person_to_pic_range = []
-    group_individuals(sorted_orig_dir, person_to_pic_range)
-    # print(f"person_to_pic_range: {person_to_pic_range}")
-    
-    person_to_pic = [[i for i in range(a, b)] for [a, b] in person_to_pic_range]
-    # print(f"person_to_pic: {person_to_pic}")
 
-    people_pool = set([i for i in range(len(person_to_pic_range) )])
-    # print(f"people_pool: {people_pool}")
+    # find all the individuals in the data set and make objects for them
+    people = []
+    people_seen = set()
 
+    # people.append(Individual("02463"))
+    # people.append(Individual("04202"))
 
-    while len(people_pool) > 1 :
+    d = os.scandir(ORIG_PATH)
+    for entry in d:
+        if entry.is_file():
+            # extract the individual's ID
+            id = entry.name.split('d')[0]
+            if id in people_seen:
+                continue
 
-        #randomly pick two people
-        ref_person_ind, imposter_ind = rand_people_pair(people_pool)
-        if len(person_to_pic[ref_person_ind]) < 2:
-            people_pool.remove(ref_person_ind)
-            continue
-        
-        if len(person_to_pic[imposter_ind]) < 1:
-            people_pool.remove(imposter_ind)
-            continue
+            else:
+                # add this individual's object to the people array
+                people_seen.add(id)
+                people.append(Individual(id))
 
-        # ramdonly select two genuine pcitures
-        ref_pic_ind, orig_pic_ind = rand_pair(person_to_pic[ref_person_ind], people_pool, ref_person_ind)
-        # print(f"ref_pic_ind, orig_pic_ind: {ref_pic_ind}, {orig_pic_ind}")
-        
-        # ramdonly select an imposter picture
-        imposter_pic_ind = select(person_to_pic[imposter_ind], people_pool, ref_person_ind)
-        # print(f"imposter_pic_ind: {imposter_pic_ind}")
+    d.close()
+    # randomize the array so new comparisons are being made each time
+    random.shuffle(people)
 
-        # genuine comparisons
-        emb_ref = get_embedding( index_to_path(sorted_orig_dir, orig_path, ref_pic_ind, "orig") )
-        emb_orig = get_embedding( index_to_path(sorted_orig_dir, orig_path, orig_pic_ind, "orig") )
+    num_people = len(people)
 
-        orig_dist = get_embedding_dist(emb_ref, emb_orig)
+    # error file for debugging
+    error_file = open("error.txt", "w")
 
-        if orig_dist:
-            dist["same_person"]["orig"].append(float(orig_dist))
+    # get all the distances
+    while people:
+        # boolean lets us make self vs. self comparisons even if there isn't an impostor
+        impostor_exists = True
+        # randomly pick two people, ref and impostor
+        # these two people will be used in the below loops to iterate over all their photos
+        ref_person = people.pop()
+        impostor_person = None
+        if people:
+            impostor_person = people.pop()
+        else:
+            impostor_exists = False
 
-        for feature in FEATURES:
-            emb_orig_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, orig_pic_ind, feature) )
-            same_feature_dist = get_embedding_dist(emb_ref, emb_orig_retouched)
-            if same_feature_dist:
-                dist["same_person"][feature].append(float(same_feature_dist))
-            
-        # ref vs imposter
-        emb_imposter = get_embedding( index_to_path(sorted_orig_dir, orig_path, imposter_pic_ind, "orig") )
+        print(" ")
+        print(f"{len(people)} / {num_people} individuals remaining")
+        print(" ")
 
-        impostor_dist = get_embedding_dist(emb_ref, emb_imposter)
-        if impostor_dist:
-            dist["imposter"]["orig"].append(float(impostor_dist))
+        # MARK: process ref_person
+        while ref_person.photos:
 
-        for feature in FEATURES:
-            emb_imposter_retouched = get_embedding( index_to_path(sorted_orig_dir, retouched_path, imposter_pic_ind, feature) )
-            impostor_feature_dist = get_embedding_dist(emb_ref, emb_imposter_retouched)
-            if impostor_feature_dist:
-                dist["imposter"][feature].append(float(impostor_feature_dist))
+            print(ref_person.photos)
 
+            # randomly select two genuine pictures from the same individual
+            ref_pic = ref_person.next_photo()   # this will be a string
+            # ref embedding will be used for all comparisons
+            emb_ref = get_embedding( index_to_path(ref_person.id, ref_pic, orig_path, "orig") )
+
+            # make sure there is another original photo to make a comparison
+            if ref_person.photos:
+                compare_pic = ref_person.next_photo()
+                emb_compare = get_embedding( index_to_path(ref_person.id, compare_pic, orig_path, "orig") )
+                orig_dist = get_embedding_dist(emb_ref, emb_compare)
+
+                if orig_dist:
+                    dist["same_person"]["orig"].append(float(orig_dist))
+                else:
+                    if emb_ref is None:
+                        error_file.write(f"{ref_person.id}d{ref_pic}")
+                    if emb_compare is None:
+                        error_file.write(f"{ref_person.id}d{compare_pic}")
+
+            # MARK: repeat the process with a random photo from the impostor
+            # we use index 0 because the array has been randomized
+            if impostor_exists:
+                # note that we don't pop impostor photos; we're going to check ref photo
+                # against all the impostor photos
+                imp_photo = impostor_person.photos[0]
+                emb_impostor = get_embedding(index_to_path(impostor_person.id, imp_photo, orig_path, "orig"))
+                impostor_dist = get_embedding_dist(emb_ref, emb_impostor)
+                if impostor_dist:
+                    dist["imposter"]["orig"].append(float(impostor_dist))
+
+            # MARK: now move on to the feature comparisons
+            for feature in FEATURES:
+                # for same person
+                emb_orig_retouched = get_embedding(index_to_path(ref_person.id, ref_pic, retouched_path, feature))
+                orig_retouched_dist = get_embedding_dist(emb_ref, emb_orig_retouched)
+                if orig_retouched_dist:
+                    dist["same_person"][feature].append(float(orig_retouched_dist))
+
+                # MARK: for impostor. using random impostor photo as with the unmodified experiment above
+                if impostor_exists:
+                    imp_photo = impostor_person.photos[0]
+                    emb_impostor_retouched = get_embedding(index_to_path(impostor_person.id, imp_photo, retouched_path, feature))
+                    imp_retouched_dist = get_embedding_dist(emb_ref, emb_impostor_retouched)
+                    if imp_retouched_dist:
+                        dist["imposter"][feature].append(float(imp_retouched_dist))
 
     plot_graph(dist)
+    error_file.close()
