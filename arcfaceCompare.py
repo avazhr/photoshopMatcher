@@ -140,6 +140,8 @@ def plot_graph(dist):
         y_true.extend([1] * len(gen_imp))
         print(f"y_true: {y_true}")
 
+        # plot ROC curves logarithmically to bring out potential differences in graph
+
         fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(genuine_arr))
         roc_results[feature] = (fpr.tolist(), tpr.tolist(), thresholds.tolist())
         print(" ")
@@ -171,12 +173,16 @@ def plot_graph(dist):
         # plot ROC distributions
         # if both are Gaussian/completely overlap, we likely have a problem with ArcFace
         # comparisons
+        binwidth = 0.1
         plt.figure()
-        plt.hist(gen_same, bins=30, alpha=0.5, label="genuine")
-        plt.hist(gen_imp, bins=30, alpha=0.5, label="impostor")
+        plt.hist(gen_same, bins=np.arange(min(gen_same), max(gen_same) + binwidth, binwidth), alpha=0.5, label="genuine")
+        plt.hist(gen_imp, bins=np.arange(min(gen_imp), max(gen_imp) + binwidth, binwidth), alpha=0.5, label="impostor")
         plt.legend(loc='upper right')
         plt.gca().set(title=f"Distribution for {feature}", ylabel='Frequency')
         plt.savefig(f"{feature}_dist.png")
+
+        # plot original distributions against each other in pairs
+        # genuine vs. eyes_100, lips_100, etc.
 
     # output dist
     f = open("results.json", "w")
@@ -306,6 +312,8 @@ if __name__ == "__main__":
             # ref embedding will be used for all comparisons
             emb_ref = get_embedding( index_to_path(ref_person.id, ref_pic, orig_path, "orig") )
 
+            compare_pic = None  # gets used for the feature comparisons, too
+
             # make sure there is another original photo to make a comparison
             if ref_person.photos:
                 compare_pic = ref_person.next_photo()
@@ -333,8 +341,8 @@ if __name__ == "__main__":
 
             # MARK: now move on to the feature comparisons
             for feature in FEATURES:
-                # for same person
-                emb_orig_retouched = get_embedding(index_to_path(ref_person.id, ref_pic, retouched_path, feature))
+                # for same person; use compare pic's path
+                emb_orig_retouched = get_embedding(index_to_path(ref_person.id, compare_pic, retouched_path, feature))
                 orig_retouched_dist = get_embedding_dist(emb_ref, emb_orig_retouched)
                 if orig_retouched_dist:
                     dist["same_person"][feature].append(float(orig_retouched_dist))
@@ -346,6 +354,8 @@ if __name__ == "__main__":
                     imp_retouched_dist = get_embedding_dist(emb_ref, emb_impostor_retouched)
                     if imp_retouched_dist:
                         dist["imposter"][feature].append(float(imp_retouched_dist))
+
+    # calculate d'
 
     plot_graph(dist)
     error_file.close()
