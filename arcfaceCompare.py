@@ -23,8 +23,8 @@ from sklearn import metrics
 #from work_queue import *    # comment this out if developing locally or run:
                             # conda install -c conda-forge ndcctools
 
-ORIG_PATH = "/Volumes/Extreme Pro/FRGC-2.0-dist/FRGC-2.0-dist/nd1/Fall2003"
-RETOUCHED_PATH = "/Volumes/Extreme Pro/FacialRetouch"
+# ORIG_PATH = "/Volumes/Extreme Pro/FRGC-2.0-dist/FRGC-2.0-dist/nd1/Fall2003"
+# RETOUCHED_PATH = "/Volumes/Extreme Pro/FacialRetouch"
 # FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100"]
 FEATURES = ["eyes_100", "faceshape_100", "lips_100", "nose_100", "eyes_50", "faceshape_50", "lips_50", "nose_50"]
 DEST_DIRNAMES = {
@@ -170,7 +170,7 @@ def plot_graph(dist):
         plt.legend(loc="lower right")
         plt.savefig(f"{feature}.png")
 
-        # plot ROC distributions
+        # plot distributions
         # if both are Gaussian/completely overlap, we likely have a problem with ArcFace
         # comparisons
         binwidth = 0.1
@@ -203,7 +203,7 @@ class Individual:
     def __init__(self, id):
         self.id = id
         self.photos = []
-        d = os.scandir(ORIG_PATH)
+        d = os.scandir(orig_path)
         for entry in d:
             if entry.is_file() and id == entry.name.split('d')[0]:
                 # get the second half of the filename that identifies this photo
@@ -263,7 +263,7 @@ if __name__ == "__main__":
     # people.append(Individual("02463"))
     # people.append(Individual("04202"))
 
-    d = os.scandir(ORIG_PATH)
+    d = os.scandir(orig_path)
     for entry in d:
         if entry.is_file():
             # extract the individual's ID
