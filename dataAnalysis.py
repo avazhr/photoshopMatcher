@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-whitegrid')
 from sklearn import metrics
 import matplotlib.colors as mcolors
+import pandas as pd
+import scipy.stats as stats
+import seaborn as sns
 
 # 1. plot the distributions between genuine, retouched, and imposter
 def plot_dist(data):
@@ -125,6 +128,17 @@ def plot_all_roc(data):
     plt.legend(loc="lower right")
     plt.savefig("results/roc.png")            
     
+def anova():
+    df = pd.read_json("results.json")
+    # json_struct = json.loads(df.to_json(orient="results.json"))
+    same_df = df["same_person"]
+    same_df.index=["orig_same","eyes_100_same"] # finish this and do the same for impostor
+    # df_flat = pd.json_normalize(
+    #     df, 
+    #     record_path=["same_person", "imposter"]
+    #     )
+
+
 if __name__ == "__main__":
 
     f = open("results.json")
@@ -135,3 +149,4 @@ if __name__ == "__main__":
     plot_dist(data)
     # plot_all_roc(data)
 
+    anova()
