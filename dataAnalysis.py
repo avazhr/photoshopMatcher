@@ -10,6 +10,10 @@ import pandas as pd
 import scipy.stats as stats
 import seaborn as sns
 
+from scipy.optimize import brentq
+from scipy.interpolate import interp1d
+from sklearn.metrics import roc_curve
+
 # 1. plot the distributions between genuine, retouched, and imposter
 def plot_dist(data):
 
@@ -127,7 +131,8 @@ def plot_all_roc(data):
     plt.title(f"ROC")
     plt.legend(loc="lower right")
     plt.savefig("results/roc.png")            
-    
+
+# 4. anova 
 def anova():
     df = pd.read_json("results.json")
     # json_struct = json.loads(df.to_json(orient="results.json"))
@@ -138,6 +143,74 @@ def anova():
     #     record_path=["same_person", "imposter"]
     #     )
 
+# 5. equal error rate
+def calc_eer(data):
+
+    res = []
+
+    for category in data:
+        for feature in data[category]:
+            
+            gen_same = data["same_person"][feature]
+            gen_imp = data["imposter"][feature]
+            genuine_arr = [*gen_same, *gen_imp] # concatenate gen_same and gen_imp
+            y_true = [-1] * len(gen_same)
+            y_true.extend([1] * len(gen_imp))
+
+            fpr, tpr, thresholds = metrics.roc_curve(np.array(y_true), np.array(genuine_arr), pos_label=1)
+
+            eer = brentq(lambda x : 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
+            thresh = interp1d(fpr, thresholds)(eer)
+
+            res.append(eer)
+        break
+
+    return res
+
+def plot_eer(data):
+
+    # columns = [f"orig vs. {b}" if a== "same_person" else f"imp vs. {b}" for a in data for b in data[a]]
+    columns = [f"orig vs. {a}" for a in data["same_person"]]
+    print(columns)
+    d_prime = calc_eer(data)
+    print(d_prime)  
+
+    fig, ax = plt.subplots(figsize =(16, 9))
+    ax.barh(columns, d_prime)
+    
+    # Remove axes splines
+    for s in ['top', 'bottom', 'left', 'right']:
+        ax.spines[s].set_visible(False)
+    # Remove x, y Ticks
+    ax.xaxis.set_ticks_position('none')
+    ax.yaxis.set_ticks_position('none')
+    # Add padding between axes and labels
+    ax.xaxis.set_tick_params(pad = 5)
+    ax.yaxis.set_tick_params(pad = 10)
+    
+    # Add x, y gridlines
+    ax.grid(b = True, color ='grey',
+            linestyle ='-.', linewidth = 0.5,
+            alpha = 0.2)
+    # Show top values
+    ax.invert_yaxis()
+    
+    # Add annotation to bars
+    for i in ax.patches:
+        plt.text(i.get_width(), i.get_y()+0.5,
+                str(round((i.get_width()), 5)),
+                fontsize = 10, fontweight ='bold',
+                color ='grey')
+    
+    # Add Plot Title
+    ax.set_title('EER for different comparisons', fontsize = 20,
+                loc ='left', )
+
+    
+    # Show Plot
+    #plt.show()
+    plt.savefig(f"results/eer_bar.png")   
+
 
 if __name__ == "__main__":
 
@@ -146,7 +219,8 @@ if __name__ == "__main__":
     data = json.load(f)
 
     # plot_d_prime(data)
-    plot_dist(data)
+    # plot_dist(data)
     # plot_all_roc(data)
 
-    anova()
+    # anova()
+    print(plot_eer(data))
