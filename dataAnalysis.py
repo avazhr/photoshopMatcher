@@ -167,9 +167,31 @@ def anova():
     print(df_flat.columns)
     print(df_flat.to_string())
 
-    # change this to reflect ANOVA tests we want to run
-    fvalue, pvalue = stats.f_oneway(df_flat["orig_same"], df_flat["eyes_100_same"], df_flat["lips_100_same"])
-    print(fvalue, pvalue)
+    EXPERIMENTS = ["eyes", "faceshape", "lips", "nose"]
+    ORIG_SAME = "orig_same"
+    ORIG_IMP = "orig_imp"
+    for e in EXPERIMENTS:
+        # run same trial
+        same_50 = f"{e}_50_same"
+        same_100 = f"{e}_100_same"
+        fvalue, pvalue = stats.f_oneway(df_flat[ORIG_SAME], df_flat[same_50], df_flat[same_100])
+        if pvalue > 0.05:
+            print(f"H0 rejected for {ORIG_SAME}, {same_50}, {same_100}")
+            print(fvalue, pvalue)
+
+        # run impostor trial
+        imp_50 = f"{e}_50_imp"
+        imp_100 = f"{e}_100_imp"
+        fvalue, pvalue = stats.f_oneway(df_flat[ORIG_IMP], df_flat[imp_50], df_flat[imp_100])
+        if pvalue > 0.05:
+            print(f"H0 rejected for {ORIG_IMP}, {imp_50}, {imp_100}")
+            print(fvalue, pvalue)
+
+        # run 100 same vs 100 imp trial
+        fvalue, pvalue = stats.f_oneway(df_flat[ORIG_SAME], df_flat[same_100], df_flat[imp_100])
+        if pvalue > 0.05:
+            print(f"H0 rejected for {ORIG_SAME}, {same_100}, {imp_100}")
+            print(fvalue, pvalue)
 
 # 5. equal error rate
 def calc_eer(data):
@@ -250,5 +272,5 @@ if __name__ == "__main__":
     # plot_dist(data)
     # plot_all_roc(data)
 
-    # anova()
+    anova()
     print(plot_eer(data))
