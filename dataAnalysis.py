@@ -137,11 +137,39 @@ def anova():
     df = pd.read_json("results.json")
     # json_struct = json.loads(df.to_json(orient="results.json"))
     same_df = df["same_person"]
-    same_df.index=["orig_same","eyes_100_same"] # finish this and do the same for impostor
-    # df_flat = pd.json_normalize(
-    #     df, 
-    #     record_path=["same_person", "imposter"]
-    #     )
+    same_df.index = [
+        "orig_same", 
+        "eyes_100_same", 
+        "faceshape_100_same", 
+        "lips_100_same", 
+        "nose_100_same",
+        "eyes_50_same",
+        "faceshape_50_same",
+        "lips_50_same",
+        "nose_50_same"
+    ] # finish this and do the same for impostor
+    imp_df = df["imposter"]
+    imp_df.index = [
+        "orig_imp",
+        "eyes_100_imp",
+        "faceshape_100_imp",
+        "lips_100_imp",
+        "nose_100_imp",
+        "eyes_50_imp",
+        "faceshape_50_imp",
+        "lips_50_imp",
+        "nose_50_imp"
+    ]
+    df_flat = pd.concat([same_df, imp_df])
+    
+    
+    df_flat.columns = ["experiment", "values"]
+    print(df_flat.columns)
+    print(df_flat.to_string())
+
+    # change this to reflect ANOVA tests we want to run
+    fvalue, pvalue = stats.f_oneway(df_flat["orig_same"], df_flat["eyes_100_same"], df_flat["lips_100_same"])
+    print(fvalue, pvalue)
 
 # 5. equal error rate
 def calc_eer(data):
