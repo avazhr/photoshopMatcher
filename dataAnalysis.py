@@ -164,7 +164,6 @@ def anova():
     
     
     df_flat.columns = ["experiment", "values"]
-    print(df_flat.columns)
     print(df_flat.to_string())
 
     EXPERIMENTS = ["eyes", "faceshape", "lips", "nose"]
@@ -174,24 +173,24 @@ def anova():
         # run same trial
         same_50 = f"{e}_50_same"
         same_100 = f"{e}_100_same"
-        fvalue, pvalue = stats.f_oneway(df_flat[ORIG_SAME], df_flat[same_50], df_flat[same_100])
-        if pvalue > 0.05:
-            print(f"H0 rejected for {ORIG_SAME}, {same_50}, {same_100}")
+        fvalue, pvalue = stats.ttest_ind(df_flat[ORIG_SAME], df_flat[same_100], equal_var=True)
+        if pvalue < 0.05:
+            print(f"H0 rejected for {ORIG_SAME}, {same_100}")
             print(fvalue, pvalue)
 
         # run impostor trial
         imp_50 = f"{e}_50_imp"
         imp_100 = f"{e}_100_imp"
-        fvalue, pvalue = stats.f_oneway(df_flat[ORIG_IMP], df_flat[imp_50], df_flat[imp_100])
-        if pvalue > 0.05:
-            print(f"H0 rejected for {ORIG_IMP}, {imp_50}, {imp_100}")
+        fvalue, pvalue = stats.ttest_ind(df_flat[ORIG_IMP], df_flat[imp_100], equal_var=True)
+        if pvalue < 0.05:
+            print(f"H0 rejected for {ORIG_IMP}, {imp_100}")
             print(fvalue, pvalue)
 
         # run 100 same vs 100 imp trial
-        fvalue, pvalue = stats.f_oneway(df_flat[ORIG_SAME], df_flat[same_100], df_flat[imp_100])
-        if pvalue > 0.05:
-            print(f"H0 rejected for {ORIG_SAME}, {same_100}, {imp_100}")
-            print(fvalue, pvalue)
+        # fvalue, pvalue = stats.f_oneway(df_flat[ORIG_SAME], df_flat[same_100], df_flat[imp_100])
+        # if pvalue > 0.05:
+        #     print(f"H0 rejected for {ORIG_SAME}, {same_100}, {imp_100}")
+        #     print(fvalue, pvalue)
 
 # 5. equal error rate
 def calc_eer(data):
@@ -273,4 +272,4 @@ if __name__ == "__main__":
     # plot_all_roc(data)
 
     anova()
-    print(plot_eer(data))
+    # print(plot_eer(data))
