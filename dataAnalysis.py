@@ -173,6 +173,12 @@ def anova():
         # run same trial
         same_50 = f"{e}_50_same"
         same_100 = f"{e}_100_same"
+        # 50
+        fvalue, pvalue = stats.ttest_ind(df_flat[ORIG_SAME], df_flat[same_50], equal_var=True)
+        if pvalue < 0.05:
+            print(f"H0 rejected for {ORIG_SAME}, {same_50}")
+            print(fvalue, pvalue)
+        # 100
         fvalue, pvalue = stats.ttest_ind(df_flat[ORIG_SAME], df_flat[same_100], equal_var=True)
         if pvalue < 0.05:
             print(f"H0 rejected for {ORIG_SAME}, {same_100}")
@@ -181,6 +187,12 @@ def anova():
         # run impostor trial
         imp_50 = f"{e}_50_imp"
         imp_100 = f"{e}_100_imp"
+        # 50
+        fvalue, pvalue = stats.ttest_ind(df_flat[ORIG_IMP], df_flat[imp_50], equal_var=True)
+        if pvalue < 0.05:
+            print(f"H0 rejected for {ORIG_IMP}, {imp_50}")
+            print(fvalue, pvalue)        
+        # 100
         fvalue, pvalue = stats.ttest_ind(df_flat[ORIG_IMP], df_flat[imp_100], equal_var=True)
         if pvalue < 0.05:
             print(f"H0 rejected for {ORIG_IMP}, {imp_100}")
